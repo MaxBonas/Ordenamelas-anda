@@ -3,11 +3,9 @@ apply plugin: 'kotlin'
 
 dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.21'
-    // HTTP client for calling Google Maps APIs
     implementation 'com.squareup.okhttp3:okhttp:4.11.0'
-    implementation 'org.json:json:20231018'
-    // Google Maps Java client
-    implementation 'com.google.maps:google-maps-services:2.2.0'
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     // OpenAI API client
     implementation 'com.theokanning.openai-gpt3-java:client:0.12.0'
     testImplementation 'junit:junit:4.13.2'

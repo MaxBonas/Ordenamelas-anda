@@ -1,4 +1,4 @@
-package com.example.routes
+package com.correos.delivery.core.model
 
 /**
  * Data model representing a postal address and its coordinates.

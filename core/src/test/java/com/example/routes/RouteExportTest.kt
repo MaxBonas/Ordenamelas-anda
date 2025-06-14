@@ -2,6 +2,7 @@ package com.example.routes
 
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.correos.delivery.core.model.Address
 
 class RouteExportTest {
     private val origin = Address("0", "Origin", "1", 0.0, 0.0)

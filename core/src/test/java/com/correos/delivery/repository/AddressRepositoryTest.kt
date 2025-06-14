@@ -1,5 +1,5 @@
 import com.correos.delivery.repository.AddressRepository
-import com.example.routes.Address
+import com.correos.delivery.core.model.Address
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
