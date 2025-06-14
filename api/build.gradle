@@ -6,7 +6,10 @@ dependencies {
     // HTTP client for calling Google Maps APIs
     implementation 'com.squareup.okhttp3:okhttp:4.11.0'
     implementation 'org.json:json:20231018'
-    // TODO: add OpenAI and Google Maps dependencies
+    // Google Maps Java client
+    implementation 'com.google.maps:google-maps-services:2.2.0'
+    // OpenAI API client
+    implementation 'com.theokanning.openai-gpt3-java:client:0.12.0'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.5.0'
 }
