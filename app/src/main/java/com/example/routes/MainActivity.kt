@@ -6,6 +6,9 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
+import android.location.LocationManager
+import android.location.Geocoder
+import android.content.Context
 import androidx.core.content.FileProvider
 import com.example.routes.BuildConfig
 import androidx.appcompat.app.AppCompatActivity
@@ -15,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.correos.delivery.core.SpeechRecognitionService
 import com.correos.delivery.export.GpxExporter
 import com.correos.delivery.repository.AddressRepository
+import com.correos.delivery.api.RouteOptimizer
 import com.example.routes.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity(), SpeechRecognitionService.Callback {
@@ -110,23 +114,41 @@ class MainActivity : AppCompatActivity(), SpeechRecognitionService.Callback {
             return
         }
 
+        // Obtain current location using LocationManager
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+
+        if (location == null) {
+            Toast.makeText(this, "Unable to obtain current location", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Convert spoken addresses into Address objects with coordinates
+        val geocoder = Geocoder(this)
         val repo = AddressRepository()
         for (a in addresses) {
             val parts = a.split(",").map { it.trim() }
+            val result = try { geocoder.getFromLocationName(a, 1) } catch (e: Exception) { null }
+            val first = result?.firstOrNull()
             repo.add(
                 Address(
                     postalCode = parts.getOrNull(0) ?: "",
                     street = parts.getOrNull(1) ?: "",
                     number = parts.getOrNull(2) ?: "",
-                    latitude = 0.0,
-                    longitude = 0.0
+                    latitude = first?.latitude ?: 0.0,
+                    longitude = first?.longitude ?: 0.0
                 )
             )
         }
 
+        // Optimize the list of stops
+        val optimizer = RouteOptimizer()
+        val ordered = optimizer.optimize(repo.getAll())
+
         val exporter = GpxExporter()
         val gpxFile = try {
-            exporter.export(repo.getAll())
+            exporter.export(ordered)
         } catch (e: Exception) {
             Toast.makeText(this, "Error writing GPX file", Toast.LENGTH_SHORT).show()
             null
