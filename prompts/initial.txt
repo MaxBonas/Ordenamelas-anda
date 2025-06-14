@@ -1,0 +1,34 @@
+Ayúdame a generar la estructura inicial de una app Android en Java (o Kotlin si lo prefieres) para que mi amiga Vane pueda optimizar sus rutas de reparto de notificaciones de Correos. Debe incluir:
+
+1. Objetivos funcionales:
+   - Un botón “Push to Talk” que lance el reconocimiento de voz y capture direcciones en formato “Código Postal, Calle, Número”.
+   - Una lista dinámica donde se vayan almacenando todas las direcciones dictadas.
+   - Un botón “Terminado” que, al pulsarlo, obtenga la ubicación GPS actual del dispositivo.
+   - Llamada a la Google Maps Route Optimization API (o Fleet Engine Route Optimization) para:
+     • Ordenar las paradas desde la posición actual de Vane.
+     • Calcular una ruta circular eficiente según tráfico y restricciones de callejero.
+   - Generación de un archivo GPX (o KML) con la ruta optimizada.
+   - Posibilidad de lanzar un Intent a Google Maps (u otra app GPS) importando ese GPX/KML para navegación.
+
+2. Estrategias técnicas:
+   - **Modularidad Maven/Gradle**:
+     • `app/`: UI Android, reconocimiento de voz, manejo de lista y navegación.
+     • `core/`: modelos de datos (Dirección, Ruta), lógica de conversión a GPX.
+     • `api/`: cliente OpenAI Codex (para scaffolding) y cliente Google Maps (Route Optimization).
+   - **Dependencias clave**:
+     • AndroidX Material, Lifecycle, ViewModel.
+     • SpeechRecognizer de Android.
+     • Google Maps Platform: “platform-tools”, “platforms;android-33”, “build-tools;33.0.0” instalados.
+     • Librería oficial `com.openai:openai` para invocar Codex desde scripts si se desea.
+   - **Gestión de licencias y entorno**:
+     • Script `setup.sh` que instale JDK 11, Android SDK CLI, acepte licencias headless y deje Maven/Gradle listos.
+     • Variables ANDROID_SDK_ROOT y PATH configuradas en `~/.bashrc`.
+   - **Formato de salida**:
+     • Carpeta `prompts/` con este `initial.txt`.
+     • `build.gradle` y `AndroidManifest.xml` con permisos de INTERNET, RECORD_AUDIO y ACCESS_FINE_LOCATION.
+     • MainActivity.java (o MainActivity.kt) con métodos stub: `startListening()`, `stopListening()`, `onResults()`, `optimizeRoute()`.
+
+3. Resultado esperado:
+   - Un proyecto esquelético con directorios y ficheros básicos.
+   - Dependencias incluidas en `pom.xml` o `build.gradle`.
+   - Clases y manifiesto definidos, con comentarios “// TODO” en los puntos donde implementar la lógica.
