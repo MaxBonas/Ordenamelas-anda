@@ -7,6 +7,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.List;
@@ -20,8 +22,7 @@ import java.util.List;
  */
 public class RouteOptimizer {
 
-    /** TODO Replace with the actual Google Maps API key. */
-    private static final String API_KEY = "YOUR_GOOGLE_MAPS_KEY";
+    private static final String API_KEY = loadApiKey();
     private static final String ENDPOINT = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
     private final OkHttpClient client;
@@ -32,6 +33,14 @@ public class RouteOptimizer {
 
     public RouteOptimizer(OkHttpClient client) {
         this.client = client;
+    }
+
+    private static String loadApiKey() {
+        String key = System.getProperty("google.maps.apiKey");
+        if (key == null || key.isEmpty()) {
+            key = System.getenv("GOOGLE_MAPS_API_KEY");
+        }
+        return key != null ? key : "";
     }
 
     /**
@@ -61,12 +70,66 @@ public class RouteOptimizer {
     }
 
     private String buildRequestBody(List<Address> stops) {
-        // TODO Construct request JSON matching Google Maps Routes API format
-        return "{}";
+        if (stops.isEmpty()) {
+            return "{}";
+        }
+
+        JSONObject root = new JSONObject();
+        root.put("travelMode", "DRIVE");
+        root.put("optimizeWaypointOrder", true);
+
+        root.put("origin", waypoint(stops.get(0)));
+        Address destination = stops.get(stops.size() - 1);
+        root.put("destination", waypoint(destination));
+
+        if (stops.size() > 2) {
+            JSONArray inter = new JSONArray();
+            for (int i = 1; i < stops.size() - 1; i++) {
+                inter.put(waypoint(stops.get(i)));
+            }
+            root.put("intermediates", inter);
+        }
+
+        return root.toString();
     }
 
     private List<Address> parseOptimizedStops(String json, List<Address> original) {
-        // TODO Parse the response JSON and reorder the list accordingly
-        return original;
+        try {
+            JSONObject obj = new JSONObject(json);
+            JSONArray routes = obj.optJSONArray("routes");
+            if (routes == null || routes.length() == 0) {
+                return original;
+            }
+
+            JSONObject route = routes.getJSONObject(0);
+            JSONArray order = route.optJSONArray("optimizedIntermediateWaypointIndex");
+            if (order == null) {
+                return original;
+            }
+
+            List<Address> result = new java.util.ArrayList<>();
+            result.add(original.get(0));
+            for (int i = 0; i < order.length(); i++) {
+                int idx = order.getInt(i);
+                result.add(original.get(idx + 1));
+            }
+            if (original.size() > 1) {
+                result.add(original.get(original.size() - 1));
+            }
+            return result;
+        } catch (Exception e) {
+            return original;
+        }
+    }
+
+    private JSONObject waypoint(Address a) {
+        JSONObject latLng = new JSONObject();
+        latLng.put("latitude", a.getLatitude());
+        latLng.put("longitude", a.getLongitude());
+        JSONObject location = new JSONObject();
+        location.put("latLng", latLng);
+        JSONObject waypoint = new JSONObject();
+        waypoint.put("location", location);
+        return waypoint;
     }
 }
