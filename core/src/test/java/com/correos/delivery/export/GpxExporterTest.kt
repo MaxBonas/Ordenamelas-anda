@@ -1,6 +1,6 @@
 package com.correos.delivery.export
 
-import com.example.routes.Address
+import com.correos.delivery.core.model.Address
 import org.junit.Assert.*
 import org.junit.Test
 import javax.xml.parsers.DocumentBuilderFactory

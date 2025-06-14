@@ -19,6 +19,7 @@ import com.correos.delivery.core.SpeechRecognitionService
 import com.correos.delivery.export.GpxExporter
 import com.correos.delivery.repository.AddressRepository
 import com.correos.delivery.api.RouteOptimizer
+import com.correos.delivery.core.model.Address
 import com.example.routes.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity(), SpeechRecognitionService.Callback {

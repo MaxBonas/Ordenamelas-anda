@@ -1,152 +1,111 @@
 package com.correos.delivery.api;
 
-import com.example.routes.Address;
-import okhttp3.MediaType;
+import com.correos.delivery.core.model.Address;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import retrofit2.Call;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Client for interacting with Google Maps Route Optimization API.
- * <p>
- * The API key must be configured before calling {@link #optimize(List)}. Replace
- * the {@code API_KEY} constant with your own key or load it from configuration.
- * </p>
+ * Client for interacting with Google Maps Route Optimization API using Retrofit.
  */
 public class RouteOptimizer {
 
-    private static final String API_KEY = loadApiKey();
-    private static final String ENDPOINT = "https://routes.googleapis.com/directions/v2:computeRoutes";
-    private static final Logger LOGGER = Logger.getLogger(RouteOptimizer.class.getName());
+    private static final String BASE_URL = "https://routes.googleapis.com/directions/";
 
-    /** Check whether an API key was provided through configuration. */
-    private static boolean hasApiKey() {
-        return API_KEY != null && !API_KEY.isEmpty();
-    }
+    private final RoutesService service;
+    private final String apiKey;
 
-    private final OkHttpClient client;
-
-    public RouteOptimizer() {
-        this(new OkHttpClient());
-    }
-
-    public RouteOptimizer(OkHttpClient client) {
-        this.client = client;
-    }
-
-    private static String loadApiKey() {
-        String key = System.getProperty("google.maps.apiKey");
-        if (key == null || key.isEmpty()) {
-            key = System.getenv("GOOGLE_MAPS_API_KEY");
-        }
-        return key != null ? key : "";
+    /**
+     * Create an optimizer with a provided {@link RoutesService} and API key.
+     */
+    public RouteOptimizer(RoutesService service, String apiKey) {
+        this.service = service;
+        this.apiKey = apiKey;
     }
 
     /**
-     * Optimize the order of the provided stops by invoking the Google Maps
-     * Route Optimization endpoint.
-     * <p>
-     * If a network error occurs the original list is returned and the failure is
-     * logged.
-     * </p>
-     *
-     * @param stops list of addresses to optimize
-     * @return the ordered list of addresses as returned by the service or the
-     * input list if an error occurs
+     * Convenience constructor that builds a default Retrofit service with 30s timeout.
      */
-    public List<Address> optimize(List<Address> stops) {
-        if (!hasApiKey()) {
-            LOGGER.warning("Google Maps API key not configured");
-            return stops;
-        }
-        RequestBody body = RequestBody.create(buildRequestBody(stops), MediaType.parse("application/json"));
-        Request request = new Request.Builder()
-                .url(ENDPOINT + "?key=" + API_KEY)
-                .post(body)
+    public RouteOptimizer(String apiKey) {
+        this(defaultService(), apiKey);
+    }
+
+    private static RoutesService defaultService() {
+        OkHttpClient client = new OkHttpClient.Builder()
+                .callTimeout(30, TimeUnit.SECONDS)
                 .build();
-        try (Response response = client.newCall(request).execute()) {
-            ResponseBody responseBody = response.body();
-            if (response.isSuccessful() && responseBody != null) {
-                String json = responseBody.string();
-                return parseOptimizedStops(json, stops);
-            }
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error calling route optimization service", e);
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(BASE_URL)
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        return retrofit.create(RoutesService.class);
+    }
+
+    /**
+     * Optimize the provided list of stops. May issue multiple requests if the
+     * amount of stops exceeds the API limit (25 per request).
+     *
+     * @param stops ordered list of stops including origin and destination
+     * @return optimized list of stops
+     * @throws RouteOptimizationException if the request fails or response is invalid
+     */
+    public List<Address> optimize(List<Address> stops) throws RouteOptimizationException {
+        if (stops == null || stops.size() <= 1) {
             return stops;
         }
-        return stops;
-    }
 
-    private String buildRequestBody(List<Address> stops) {
-        if (stops.isEmpty()) {
-            return "{}";
+        if (stops.size() <= 25) {
+            return optimizeChunk(stops);
         }
 
-        JSONObject root = new JSONObject();
-        root.put("travelMode", "DRIVE");
-        root.put("optimizeWaypointOrder", true);
-
-        root.put("origin", waypoint(stops.get(0)));
-        Address destination = stops.get(stops.size() - 1);
-        root.put("destination", waypoint(destination));
-
-        if (stops.size() > 2) {
-            JSONArray inter = new JSONArray();
-            for (int i = 1; i < stops.size() - 1; i++) {
-                inter.put(waypoint(stops.get(i)));
-            }
-            root.put("intermediates", inter);
+        List<Address> result = new ArrayList<>();
+        // process first chunk normally
+        List<Address> first = optimizeChunk(stops.subList(0, 25));
+        result.addAll(first);
+        int index = 24; // last element of first chunk is also start of next
+        while (index < stops.size() - 1) {
+            int end = Math.min(index + 24, stops.size() - 1);
+            List<Address> sub = stops.subList(index, end + 1);
+            List<Address> part = optimizeChunk(sub);
+            result.addAll(part.subList(1, part.size())); // skip duplicated origin
+            index = end;
         }
-
-        return root.toString();
+        return result;
     }
 
-    private List<Address> parseOptimizedStops(String json, List<Address> original) {
+    private List<Address> optimizeChunk(List<Address> chunk) throws RouteOptimizationException {
+        ComputeRoutesRequest request = ComputeRoutesRequest.fromStops(chunk);
+        Call<RoutesResponse> call = service.computeRoutes(apiKey, request);
         try {
-            JSONObject obj = new JSONObject(json);
-            JSONArray routes = obj.optJSONArray("routes");
-            if (routes == null || routes.length() == 0) {
-                return original;
+            Response<RoutesResponse> response = call.execute();
+            if (!response.isSuccessful() || response.body() == null ||
+                    response.body().routes == null || response.body().routes.isEmpty()) {
+                throw new RouteOptimizationException("Invalid response from service");
             }
-
-            JSONObject route = routes.getJSONObject(0);
-            JSONArray order = route.optJSONArray("optimizedIntermediateWaypointIndex");
-            if (order == null) {
-                return original;
+            RoutesResponse.Route route = response.body().routes.get(0);
+            List<Address> ordered = new ArrayList<>();
+            ordered.add(chunk.get(0));
+            if (route.optimizedIntermediateWaypointIndex != null) {
+                for (Integer idx : route.optimizedIntermediateWaypointIndex) {
+                    ordered.add(chunk.get(idx + 1));
+                }
+            } else {
+                for (int i = 1; i < chunk.size() - 1; i++) {
+                    ordered.add(chunk.get(i));
+                }
             }
-
-            List<Address> result = new java.util.ArrayList<>();
-            result.add(original.get(0));
-            for (int i = 0; i < order.length(); i++) {
-                int idx = order.getInt(i);
-                result.add(original.get(idx + 1));
-            }
-            if (original.size() > 1) {
-                result.add(original.get(original.size() - 1));
-            }
-            return result;
-        } catch (Exception e) {
-            return original;
+            ordered.add(chunk.get(chunk.size() - 1));
+            return ordered;
+        } catch (IOException e) {
+            throw new RouteOptimizationException("Failed to call optimization API", e);
         }
-    }
-
-    private JSONObject waypoint(Address a) {
-        JSONObject latLng = new JSONObject();
-        latLng.put("latitude", a.getLatitude());
-        latLng.put("longitude", a.getLongitude());
-        JSONObject location = new JSONObject();
-        location.put("latLng", latLng);
-        JSONObject waypoint = new JSONObject();
-        waypoint.put("location", location);
-        return waypoint;
     }
 }

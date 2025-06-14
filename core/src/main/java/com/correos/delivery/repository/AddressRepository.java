@@ -1,6 +1,6 @@
 package com.correos.delivery.repository;
 
-import com.example.routes.Address;
+import com.correos.delivery.core.model.Address;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
