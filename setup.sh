@@ -25,6 +25,7 @@ if ! grep -q ANDROID_SDK_ROOT "$HOME/.bashrc"; then
 fi
 export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
 
-# Accept licenses
+# Accept licenses and install required SDK packages
 yes | sdkmanager --licenses
+sdkmanager --install "platform-tools" "platforms;android-33" "build-tools;33.0.0"
 

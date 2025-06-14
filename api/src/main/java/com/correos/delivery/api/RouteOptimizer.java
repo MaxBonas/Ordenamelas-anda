@@ -28,6 +28,11 @@ public class RouteOptimizer {
     private static final String ENDPOINT = "https://routes.googleapis.com/directions/v2:computeRoutes";
     private static final Logger LOGGER = Logger.getLogger(RouteOptimizer.class.getName());
 
+    /** Check whether an API key was provided through configuration. */
+    private static boolean hasApiKey() {
+        return API_KEY != null && !API_KEY.isEmpty();
+    }
+
     private final OkHttpClient client;
 
     public RouteOptimizer() {
@@ -59,6 +64,10 @@ public class RouteOptimizer {
      * input list if an error occurs
      */
     public List<Address> optimize(List<Address> stops) {
+        if (!hasApiKey()) {
+            LOGGER.warning("Google Maps API key not configured");
+            return stops;
+        }
         RequestBody body = RequestBody.create(buildRequestBody(stops), MediaType.parse("application/json"));
         Request request = new Request.Builder()
                 .url(ENDPOINT + "?key=" + API_KEY)

@@ -18,3 +18,13 @@ El JAR del wrapper se almacena en formato base64 para evitar subir archivos bina
 ```bash
 ./gradlew assemble
 ```
+
+El script `setup.sh` ahora también instala `platform-tools`, `platforms;android-33` y `build-tools;33.0.0` para que el proyecto pueda compilarse sin pasos manuales.
+
+Para ejecutar las pruebas unitarias:
+
+```bash
+./gradlew test
+```
+
+La clave de la Google Maps Route Optimization API debe proporcionarse en la variable de entorno `GOOGLE_MAPS_API_KEY` (o en la propiedad del sistema `google.maps.apiKey`) antes de ejecutar la aplicación.
