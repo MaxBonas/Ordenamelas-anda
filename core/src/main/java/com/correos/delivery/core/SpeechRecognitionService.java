@@ -35,6 +35,14 @@ public class SpeechRecognitionService {
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
     }
 
+    /** Visible for testing */
+    SpeechRecognitionService(SpeechRecognizer recognizer, Intent intent, Callback callback) {
+        this.callback = callback;
+        this.recognizer = recognizer;
+        this.recognizer.setRecognitionListener(new Listener());
+        this.recognizerIntent = intent;
+    }
+
     /** Start listening for speech input. */
     public void startListening() {
         recognizer.startListening(recognizerIntent);
@@ -43,6 +51,14 @@ public class SpeechRecognitionService {
     /** Stop listening for speech input. */
     public void stopListening() {
         recognizer.stopListening();
+    }
+
+    /**
+     * Release the underlying {@link SpeechRecognizer} and associated resources.
+     * This should be called when the service is no longer needed.
+     */
+    public void release() {
+        recognizer.destroy();
     }
 
     private class Listener implements RecognitionListener {
