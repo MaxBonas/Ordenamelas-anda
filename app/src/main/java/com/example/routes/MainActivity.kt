@@ -3,20 +3,28 @@ package com.example.routes
 import android.Manifest
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.correos.delivery.core.SpeechRecognitionService
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), SpeechRecognitionService.Callback {
+
+    private lateinit var speechService: SpeechRecognitionService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // TODO: setup UI and buttons
+        speechService = SpeechRecognitionService(this, this)
     }
 
     fun startListening() {
-        // TODO: start SpeechRecognizer
+        speechService.startListening()
     }
 
     fun stopListening() {
-        // TODO: stop SpeechRecognizer
+        speechService.stopListening()
+    }
+
+    override fun onSpeechResults(results: List<String>) {
+        onResults(results)
     }
 
     fun onResults(results: List<String>) {
