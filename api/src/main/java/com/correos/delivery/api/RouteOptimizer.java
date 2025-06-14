@@ -9,6 +9,8 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import java.io.IOException;
 import java.util.List;
@@ -24,6 +26,7 @@ public class RouteOptimizer {
 
     private static final String API_KEY = loadApiKey();
     private static final String ENDPOINT = "https://routes.googleapis.com/directions/v2:computeRoutes";
+    private static final Logger LOGGER = Logger.getLogger(RouteOptimizer.class.getName());
 
     private final OkHttpClient client;
 
@@ -46,6 +49,10 @@ public class RouteOptimizer {
     /**
      * Optimize the order of the provided stops by invoking the Google Maps
      * Route Optimization endpoint.
+     * <p>
+     * If a network error occurs the original list is returned and the failure is
+     * logged.
+     * </p>
      *
      * @param stops list of addresses to optimize
      * @return the ordered list of addresses as returned by the service or the
@@ -64,7 +71,8 @@ public class RouteOptimizer {
                 return parseOptimizedStops(json, stops);
             }
         } catch (IOException e) {
-            // TODO handle exceptions or log as needed
+            LOGGER.log(Level.SEVERE, "Error calling route optimization service", e);
+            return stops;
         }
         return stops;
     }
