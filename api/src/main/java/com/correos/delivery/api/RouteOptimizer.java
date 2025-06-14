@@ -24,7 +24,15 @@ public class RouteOptimizer {
     private static final String API_KEY = "YOUR_GOOGLE_MAPS_KEY";
     private static final String ENDPOINT = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
-    private final OkHttpClient client = new OkHttpClient();
+    private final OkHttpClient client;
+
+    public RouteOptimizer() {
+        this(new OkHttpClient());
+    }
+
+    public RouteOptimizer(OkHttpClient client) {
+        this.client = client;
+    }
 
     /**
      * Optimize the order of the provided stops by invoking the Google Maps
