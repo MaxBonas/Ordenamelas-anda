@@ -158,4 +158,9 @@ class MainActivity : AppCompatActivity(), SpeechRecognitionService.Callback {
             Toast.makeText(this, "No app found to open GPX", Toast.LENGTH_SHORT).show()
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        speechService.release()
+    }
 }
